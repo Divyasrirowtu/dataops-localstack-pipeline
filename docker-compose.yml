@@ -1,0 +1,28 @@
+version: "3.9"
+
+services:
+  localstack:
+    image: localstack/localstack:1.5
+    container_name: localstack
+    ports:
+      - "4566:4566"   # Main LocalStack endpoint
+      - "4571:4571"
+    environment:
+      - SERVICES=s3
+      - DEBUG=1
+      - DATA_DIR=/tmp/localstack/data
+    volumes:
+      - "./localstack:/tmp/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+
+  etl:
+    build:
+      context: ./etl
+      dockerfile: Dockerfile
+    container_name: etl-job
+    environment:
+      - AWS_ENDPOINT_URL=http://localstack:4566
+      - S3_BUCKET=dataops-local-bucket
+    depends_on:
+      - localstack
+      
