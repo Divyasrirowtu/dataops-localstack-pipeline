@@ -1,0 +1,68 @@
+name: DataOps Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    services:
+      localstack:
+        image: localstack/localstack:1.5
+        ports:
+          - 4566:4566
+        options: >-
+          --env SERVICES=s3
+          --env DEBUG=1
+          --env DATA_DIR=/tmp/localstack/data
+    env:
+      AWS_ENDPOINT_URL: http://localhost:4566
+      S3_BUCKET_NAME: dataops-local-bucket
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.6.0
+
+      - name: Terraform Init
+        run: |
+          cd terraform
+          terraform init
+
+      - name: Terraform Validate
+        run: |
+          cd terraform
+          terraform validate
+
+      - name: Terraform Plan
+        run: |
+          cd terraform
+          terraform plan
+
+      - name: Terraform Apply
+        run: |
+          cd terraform
+          terraform apply -auto-approve
+
+      - name: Build ETL Docker image
+        run: |
+          docker build -t etl-job ./etl
+
+      - name: Run ETL Container
+        run: |
+          docker run --rm -e AWS_ENDPOINT_URL=$AWS_ENDPOINT_URL -e S3_BUCKET=$S3_BUCKET_NAME etl-job
+
+      - name: Verify ETL Output
+        run: |
+          aws --endpoint-url=$AWS_ENDPOINT_URL s3 ls s3://$S3_BUCKET_NAME/processed/output.csv
