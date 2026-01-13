@@ -177,3 +177,4 @@ AWS CLI
 🏁 Conclusion
 
 This project demonstrates a professional-grade DataOps pipeline, bridging data engineering and DevOps using modern tooling and automation best practices.
+Project validated successfully.
